@@ -138,7 +138,9 @@ const generateDiet = async (options) => {
     return null;
   }
 };
-
+app.get("/", (req, res) => {
+  res.send("App ready   !");
+});
 app.post("/generate-diet", validateOptions(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

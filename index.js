@@ -8,7 +8,6 @@ require("dotenv").config();
 const apiKey = process.env.APIkey; // "239482"
 const app = express();
 const port = 3000;
-
 app.use(express.json());
 const swaggerOptions = require("./swaggerOptions");
 const unsplashApiKey = "your_unsplash_api_key"; // Replace with your Unsplash API key

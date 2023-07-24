@@ -2,10 +2,10 @@ const express = require("express");
 const { check, validationResult } = require("express-validator");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+require("dotenv").config();
 
 // Replace 'YOUR_OPENAI_API_KEY' with your actual OpenAI API key
-const apiKey = "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";
-
+const apiKey = process.env.APIkey; // "239482"
 const app = express();
 const port = 3000;
 

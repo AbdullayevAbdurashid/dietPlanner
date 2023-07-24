@@ -116,30 +116,65 @@ const extractDaysFromDietPlan = (generatedDiet) => {
 
   return days;
 };
-const generateDiet = async (options) => {
-  // Prepare the prompt based on the user options
-  let prompt = `Create a personalized diet plan for a ${options.healthGoal} individual with ${options.dietaryPreference} preferences for ${options.numDays} days.`;
-  if (options.allergies.length > 0) {
-    prompt += `Avoid the following allergens: ${options.allergies.join(
-      ", "
-    )}.\n`;
-  }
-  if (options.budgetConstraint) {
-    prompt += `Budget constraint: $${options.budgetConstraint}.\n`;
-  }
+// Function to generate the short overview of the diet plan
+const generateDailyDiet = async (options, day) => {
+  const { healthGoal, dietaryPreference, numDays } = options;
+  let prompt = `Create a diet plan for a ${healthGoal} individual with ${dietaryPreference} preferences for ${day} days. Now provide and send only  the diet for day ${day}.It should be only uzbek cousin`;
 
-  // Send the prompt to OpenAI API for generating the diet plan
+  // Send the prompt to OpenAI API for generating the daily diet overview
   try {
-    const generatedDiet = await askGPT(prompt);
-    return generatedDiet;
+    const response = await askGPT(prompt, 50); // Adjust the max_tokens value for the daily diet overview
+
+    // Format the response into the desired JSON object
+    const dietOverview = [];
+    let currentMeal = null;
+    const lines = response.split("\n");
+    for (let line of lines) {
+      if (line.startsWith("- ")) {
+        const food = line.substring(2);
+        if (currentMeal) {
+          currentMeal.food.push(food);
+        }
+      } else if (line.endsWith(":")) {
+        const time = line.replace(":", "");
+        currentMeal = { time, food: [] };
+        dietOverview.push(currentMeal);
+      }
+    }
+
+    return dietOverview;
   } catch (error) {
-    console.error("Error generating diet plan:", error.message);
+    console.error("Error generating daily diet overview:", error.message);
     return null;
   }
 };
+
+const generateOverview = async (options) => {
+  let prompt = `Create a  diet overview for a ${options.healthGoal} individual with ${options.dietaryPreference} preferences for ${options.numDays} days. Make it  short  100 words max.It should be only overview of diet plan.Example: This diet includes smth. It's good for smth.It should include only UZBEK cousins`;
+
+  // Send the prompt to OpenAI API for generating the short overview
+  try {
+    const response = await askGPT(prompt, 100); // Adjust the max_tokens value for the short overview
+    return response;
+  } catch (error) {
+    console.error("Error generating overview:", error.message);
+    return null;
+  }
+};
+
+// Function to generate daily diet information
+const getDayDiet = (days, dayNumber) => {
+  const targetDay = days.find((day) => day.day === dayNumber);
+  if (targetDay) {
+    return targetDay.diet;
+  }
+  return null;
+};
+
 app.get("/", (req, res) => {
   res.send("App ready   !" + process.env.APIkey + "ANDAIDNAS");
 });
+
 app.post("/generate-diet", validateOptions(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -147,12 +182,46 @@ app.post("/generate-diet", validateOptions(), async (req, res) => {
   }
 
   const options = req.body;
-  const generatedDiet = await generateDiet(options);
+  const generatedDiet = await generateOverview(options);
 
   if (generatedDiet) {
     // Send notifications for each day in the diet plan
     const days = extractDaysFromDietPlan(generatedDiet);
     res.json({ days });
+  } else {
+    res.status(500).json({ error: "Error generating diet plan" });
+  }
+});
+
+// API endpoint for getting short overview of the diet plan
+app.get("/getOverview", validateOptions(), async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  const options = req.body;
+  const overview = await generateOverview(options);
+
+  if (overview) {
+    res.json({ overview });
+  } else {
+    res.status(500).json({ error: "Error generating overview" });
+  }
+});
+
+// API endpoint for getting daily diet information
+app.get("/getDay/:dayNumber", validateOptions(), async (req, res) => {
+  const dayNumber = parseInt(req.params.dayNumber);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  const options = req.body;
+  const generatedDiet = await generateDailyDiet(options, dayNumber);
+
+  if (generatedDiet) {
+    res.json({ day: dayNumber, diet: generatedDiet });
   } else {
     res.status(500).json({ error: "Error generating diet plan" });
   }

@@ -138,7 +138,7 @@ const generateDiet = async (options) => {
   }
 };
 app.get("/", (req, res) => {
-  res.send("App ready   !");
+  res.send("App ready   !" + process.env.APIkey + "ANDAIDNAS");
 });
 app.post("/generate-diet", validateOptions(), async (req, res) => {
   const errors = validationResult(req);
